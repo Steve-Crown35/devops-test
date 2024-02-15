@@ -72,7 +72,7 @@ The rocketchat-deployment.yml pipeline runs a powershell script which deploys ro
 Make sure to modify the script; k8s-manifests/cluster-connection.ps1, to use the authentication credentials you have created. 
 
 Also modify the kube\config path - "C:\agent\_work\10\s\.kube\config", to align with the installation path of your Windows agent. 
-Use the command to get the agent current user profile:
+Use the following command to create the kubeconfig path to store cluster connection credentials:
 ```bash
 $USERPROFILE\.kube\config
 ```
