@@ -76,7 +76,11 @@ Use the following command to create the kubeconfig path to store cluster connect
 ```bash
 $USERPROFILE\.kube\config
 ```
-
+Finally, download and install AzAksCliTool (which consists of kubectl and kubelogin) on the windows agent. Do this by first running the command:
+```pwsh
+Install-AzAksCliTool
+```
+on your local machine. Find the path where the binaries are, usually install to your home directory. Copy the folders: .azure-kubectle and .azure-kubelogin to the **bin** folder of your agent.
 # Deploying Rocket.Chat
 # 1. Apply Kubernetes Manifests
 After successful deployment of kubernetes cluster, manually trigger the rocketchat-deployment.yml pipeline to create rocket.chat instance v6.5.2 on the cluster.
