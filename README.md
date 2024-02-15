@@ -63,6 +63,19 @@ Go to your azure devops project, navigate to **Pipelines ---> Environments** and
  
     * **azure-pipelines.yml** to deploy azure kubernetes cluster
     * **rocketchat-deployment.yml** to deploy rocket chat instatnce v6.5.2
+# Note: 
+The pipelines use an azure self-hosted windows agent. For steps on how to install and run an azure self-hosted agent visit https://learn.microsoft.com/en-us/azure/devops/pipelines/agents/windows-agent?view=azure-devops 
+* Setup your self-hosted agent and provide it name to **pool_type** parameter in azure-pipeline.yml and pool **name** in rocketchat-deployment.yml file
+
+The rocketchat-deployment.yml pipeline runs a powershell script which deploys rocket.chat manifests to azure kubernetes cluster provisioned by triggering azure-pipeline.yml pipeline.
+
+Make sure to modify the script; k8s-manifests/cluster-connection.ps1, to use the authentication credentials you have created. 
+
+Also modify the kube\config path - "C:\agent\_work\10\s\.kube\config", to align with the installation path of your Windows agent. 
+Use the command to get the agent current user profile:
+```bash
+$USERPROFILE\.kube\config
+```
 
 # Deploying Rocket.Chat
 # 1. Apply Kubernetes Manifests
