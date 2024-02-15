@@ -37,7 +37,7 @@ There are two seperate configurations for terraform :
 * **aks**: for azure kuberntes service.
 
 # 3. Configure Azure DevOps Pipeline
-Set up a new pipeline in your Azure DevOps project to trigger the Terraform deployment. You can use the provided azure-pipelines.yml file in the azure-pipeline folder in the repository as a starting point. The pipeline deploys kubernetes cluster and create rocket.chat instance v66.5.2 in on the cluster.
+Set up a new pipeline in your Azure DevOps project to trigger the Terraform deployment. You can use the provided azure-pipelines.yml file in the azure-pipeline folder in the repository as a starting point. The pipeline deploys kubernetes cluster and create rocket.chat instance v6.5.2 in on the cluster.
 
 
 Ensure you have configured appropriate service connections and variables in Azure DevOps for accessing Azure resources and secrets securely.
