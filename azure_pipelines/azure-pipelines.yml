@@ -1,0 +1,148 @@
+parameters:
+  - name: ado_environment
+    type: string
+    default: dev
+    values:
+      - dev
+      - prod
+      - test
+  - name: pipeline_action
+    displayName: 'Action:'
+    type: string
+    default: create
+    values:
+      - create
+      - destroy
+  - name: terraform_version
+    displayName: "Terraform version"
+    type: string
+    default: 1.7.2
+  - name: key_vault_name
+    type: string
+    default: initinfrakv
+    displayName: Init-infra Key Vault name
+  - name: azure_subscription
+    displayName: "Service Connection name"
+    type: string
+    default: rc-automation-service-connection
+  - name: pool_type
+    displayName: Agent Pool Type
+    type: string
+    default: 'rocketchat-automation'
+    
+variables:
+  - name: system.debug
+    value: true
+
+#trigger:
+#  branches:
+#    include:
+#      - main
+#
+#  paths:
+#    exclude:
+#      - azure_pipeline_templates
+#      - azure_pipelines
+#      - README.md
+
+stages:
+
+  # Terraform "plan" stage
+  - stage: plan
+    ${{ if eq(parameters.pipeline_action, 'create') }}:
+      displayName: "Plan to apply \"${{ parameters.ado_environment }}\" terraform"
+    ${{ if eq(parameters.pipeline_action, 'destroy') }}:
+      displayName: "Plan to destroy \"${{ parameters.ado_environment }}\" terraform"
+    pool: ${{ parameters.pool_type }}
+    jobs:
+
+      - job: plan
+        ${{ if eq(parameters.pipeline_action, 'create') }}:
+          displayName: "Plan to apply \"${{ parameters.ado_environment }}\""
+        ${{ if eq(parameters.pipeline_action, 'destroy') }}:
+          displayName: "Plan to destroy \"${{ parameters.ado_environment }}\""
+        steps:
+
+          - task: AzureKeyVault@2
+            inputs:
+              azureSubscription: '${{ parameters.azure_subscription }}'
+              KeyVaultName: '${{ parameters.key_vault_name }}'
+              SecretsFilter: 'eme-steve-org-service-url, ado-personal-access-token'
+              RunAsPreJob: true
+         
+
+          - template: ../azure_pipeline_templates/terraform_plan.yml
+            parameters:
+              terraform_version: "${{ parameters.terraform_version }}"
+              run_path: aks
+              output_dir: artifacts
+              workspace_name: ${{ parameters.ado_environment }}
+              ${{ if eq(parameters.pipeline_action, 'create') }}:
+                commandOptions: '-var-file="environments/${{ parameters.ado_environment }}.tfvars" -out="$(Build.SourcesDirectory)/terraform_plan"'
+              ${{ if eq(parameters.pipeline_action, 'destroy') }}:
+                commandOptions: '-destroy -var-file="environments/${{ parameters.ado_environment }}.tfvars" -out="$(Build.SourcesDirectory)/terraform_plan"'
+              azdo_org_service_url: $(eme-steve-org-service-url)
+              azdo_personal_access_token: $(ado-personal-access-token)
+              azure_subscription: ${{ parameters.azure_subscription }}
+          
+          - task: PublishPipelineArtifact@1
+            inputs:
+              targetPath: $(System.DefaultWorkingDirectory)
+              artifactName: terraform_plan
+              environment: ${{ parameters.ado_environment }}
+
+  # Terraform "apply/destroy" stage with manual "destroy" validation 
+  - ${{ if eq(variables['Build.Reason'], 'Manual') }}:
+    - stage: DeployTerraform
+      ${{ if eq(parameters.pipeline_action, 'create') }}:
+        displayName: "Apply \"${{ parameters.ado_environment }}\" terraform"
+      ${{ if eq(parameters.pipeline_action, 'destroy') }}:
+        displayName: "Destroy \"${{ parameters.ado_environment }}\" terraform"
+      dependsOn: plan
+      pool: ${{ parameters.pool_type }}
+      jobs:
+
+        # Destroy stage manual approval job
+        - ${{ if eq(parameters.pipeline_action, 'destroy') }}:
+          - job: ValidateDestroy
+            displayName: "Validate Destroy ${{ parameters.ado_environment }}"
+            condition: and(in(variables['Build.Reason'], 'Manual'), succeeded(), eq('${{ parameters.pipeline_action }}', 'destroy'))
+            pool: server #server is the reserved pool type used for agentless jobs like manual validation tasks
+            steps:
+              - task: ManualValidation@0
+                timeoutInMinutes: 60
+                inputs:
+                  instructions: 'Do you really want to destroy ${{ parameters.ado_environment }} infrastructure?'
+                  onTimeout: "fail"
+                
+            
+        # Job that runs Terraform apply or destroy
+        - deployment: Apply
+          ${{ if eq(parameters.pipeline_action, 'create') }}:
+            displayName: "Apply deployment ${{ parameters.ado_environment }}"
+          ${{ if eq(parameters.pipeline_action, 'destroy') }}:
+            displayName: "Destroy deployment ${{ parameters.ado_environment }}"
+            dependsOn: ValidateDestroy
+          environment: "${{ parameters.ado_environment }}"
+          strategy:
+            runOnce:
+              deploy:
+                steps:
+                  - checkout: self
+                  - download: current
+                  - task: AzureKeyVault@1
+                    inputs:
+                      azureSubscription: '${{ parameters.azure_subscription }}'
+                      KeyVaultName: '${{ parameters.key_vault_name }}'
+                      SecretsFilter: 'eme-steve-org-service-url, ado-personal-access-token'
+                      RunAsPreJob: true
+                  - template: ../azure_pipeline_templates/terraform_apply.yml
+                    parameters:
+                      terraform_version: "${{ parameters.terraform_version }}"
+                      run_path: aks
+                      workspace_name: "${{ parameters.ado_environment }}"
+                      azdo_org_service_url: $(infra-azdo-org-service-url)
+                      azdo_personal_access_token: $(infra-personal-access-token)
+                      azure_subscription: ${{ parameters.azure_subscription }}
+                      commandOptions: "$(Pipeline.Workspace)/terraform_plan/terraform_plan"
+

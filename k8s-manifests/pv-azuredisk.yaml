@@ -1,0 +1,18 @@
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  annotations:
+    pv.kubernetes.io/provisioned-by: disk.csi.azure.com
+  name: pv-azuredisk
+spec:
+  capacity:
+    storage: 20Gi
+  accessModes:
+  - ReadWriteOnce
+  persistentVolumeReclaimPolicy: Retain
+  storageClassName: managed-csi
+  csi:
+    driver: disk.csi.azure.com
+    volumeHandle: /subscriptions/3b95c837-890a-4f1a-9488-ca9b0dc28d46/resourceGroups/MC_AKS-RESOURCE-GROUP_DEV-AKS-CLUSTER_WESTEUROPE/providers/Microsoft.Compute/disks/aksClusterdisk"
+    volumeAttributes:
+      fsType: ext4

@@ -1,0 +1,34 @@
+name: $(BuildDefinitionName)_$(Year:yyyy).$(Month).$(DayOfMonth)$(Rev:.r)
+
+parameters:
+  - name: ado_environment
+    type: string
+    default: dev
+    values:
+      - dev
+      - prod
+      - test
+  - name: azure_subscription
+    displayName: "Service Connection name"
+    type: string
+    default: rc-automation-service-connection
+  #- name: pool_type
+  #  displayName: Agent Pool Type
+  #  type: string
+  #  default: 'rocketchat-automation'
+    
+variables:
+  - name: system.debug
+    value: true
+
+trigger: none
+  
+
+steps:
+  - checkout: self
+  - download: current
+  - task: PowerShell@2
+    inputs:
+      filePath: '.\k8s-manifests\cluster-connection.ps1'
+pool:
+  name: rocketchat-automation

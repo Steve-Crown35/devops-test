@@ -1,0 +1,63 @@
+---
+parameters:
+  - name: workspace_name
+    type: string
+  - name: run_path
+    type: string
+  - name: azdo_org_service_url
+    type: string
+  - name: azdo_personal_access_token
+    type: string
+  - name: azure_subscription
+    type: string
+  - name: commandOptions
+    type: string
+  - name: terraform_version
+    type: string
+
+steps:
+  - task: PowerShell@2
+    inputs:
+      targetType: 'inline'
+      script: |
+        $response = Invoke-RestMethod -Uri "http://ipinfo.io/json"
+            $ipAddress = $response.ip
+            Write-Host "IP Address: $ipAddress"
+    displayName: "Fetch and process JSON data"
+  
+  - task: TerraformInstaller@1
+    displayName: install terraform
+    inputs:
+      terraformVersion: ${{ parameters.terraform_version }}
+
+  - task: TerraformCLI@1
+    displayName: "terraform init"
+    inputs:
+      command: "init"
+      commandOptions: "-upgrade -backend-config=backend.tf"
+      backendType: azurerm
+      backendAzureRmSubscriptionId: '3b95c837-890a-4f1a-9488-ca9b0dc28d46'
+      backendServiceArm: "${{ parameters.azure_subscription }}"
+      workingDirectory: "${{ parameters.run_path }}"
+
+  - task: TerraformCLI@1
+    displayName: "workspace select \"${{ parameters.workspace_name }}\""
+    inputs:
+      command: "workspace"
+      workspaceSubCommand: "select"
+      commandOptions: "-or-create"
+      workspaceName: "${{ parameters.workspace_name }}"
+      workingDirectory: "${{ parameters.run_path }}"
+      environmentServiceName: "${{ parameters.azure_subscription }}"
+
+  - task: TerraformCLI@1
+    displayName: "Terraform apply \"${{ parameters.workspace_name }}\""
+    inputs:
+      command: "apply"
+      commandOptions: "${{ parameters.commandOptions }}"
+      workingDirectory: "${{ parameters.run_path }}"
+      environmentServiceName: "${{ parameters.azure_subscription }}"
+      runAzLogin: true
+    env:
+      AZDO_ORG_SERVICE_URL: ${{ parameters.azdo_org_service_url }}
+      AZDO_PERSONAL_ACCESS_TOKEN: ${{ parameters.azdo_personal_access_token }}
