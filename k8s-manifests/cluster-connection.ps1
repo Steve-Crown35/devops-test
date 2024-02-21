@@ -69,18 +69,12 @@ $clusterNodeResourceGroup = az aks show --resource-group $clusterResourceGroup -
 
 
 # Check if the disk already exists in the resource group
-$existingDisk = az disk show --name $clusterDiskName --resource-group $clusterNodeResourceGroup --query id -o tsv
+Write-Host "Disk $clusterDiskName does not exist in resource group $clusterNodeResourceGroup. Creating it..."
+# Construct the az disk create command
+$diskResourceId = az disk create --resource-group $clusterNodeResourceGroup --name $clusterDiskName --sku StandardSSD_LRS --size-gb 20 --zone 1 --query id --output tsv
 
-if (-not [string]::IsNullOrWhiteSpace($existingDisk)) {
-    Write-Host "Disk $clusterDiskName already exists in resource group $clusterNodeResourceGroup."
-    $diskResourceId = $existingDisk
-} else {
-    Write-Host "Disk $clusterDiskName does not exist in resource group $clusterNodeResourceGroup. Creating it..."
-    # Construct the az disk create command
-    $diskResourceId = az disk create --resource-group $clusterNodeResourceGroup --name $clusterDiskName --sku StandardSSD_LRS --size-gb 20 --zone 1 --query id --output tsv
-    
-    Write-Host "Disk $clusterDiskName created successfully"
-}
+Write-Host "Disk $clusterDiskName created successfully"
+
 
 # Define the Kubernetes manifest file path
 $manifestFilePath = "k8s-manifests\pv-azuredisk.yaml"
@@ -111,8 +105,8 @@ Write-Host "Ownership changed successfully"
 
 #write-host "kubelogin installation with winget was successfully"
 #refreshenv
-$spn_client_id="spn-client-id"
-$spn_client_secret="spn-client-secret"
+$spn_client_id="test-devops-spn-client-id"
+$spn_client_secret="test-devops-spn-client-secret"
 $keyvault_name="initinfrakv"
 
 
