@@ -42,6 +42,15 @@ Set up a new pipeline in your Azure DevOps project to trigger the Terraform depl
 
 Ensure you have configured appropriate service connections and variables in Azure DevOps for accessing Azure resources and secrets securely.
 
+To use this solution, you must configure the following role assignments for the underlying service connection service principal:
+* **Contributor Role** for service connection service principal to create and manage resources on the subscription.
+* **Application Administrator** role to service connection service principal to create and manage apps in Microsoft Entra ID.
+* Create keyvault Access Policy for service connection service principal to allow service principal to GET, LIST and SET secrets on azure keyvault. The following secrets must be created and added in **initinfrakv** keyvault: 
+  * azure devops organization url
+  * azure devops personal access token
+  * service connection service principal client ID
+  * service connection service principal client secret
+
 # 4. Deploy Infrastructure
 To deploy infrastructure, begin by navigating into the init-infra folder and run the following commands to setup the storage account for terraform remote backend and azure keyvault for storing service principal secrets:
 ```bash
